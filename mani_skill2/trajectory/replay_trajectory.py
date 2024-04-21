@@ -363,7 +363,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs[
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
-    env = gym.make(env_id, **env_kwargs)
+    #env = gym.make(env_id, **env_kwargs)
+    env = gym.make(env_id, **env_kwargs, camera_cfgs={"add_segmentation": True}) # 0421
+
     if pbar is not None:
         pbar.set_postfix(
             {

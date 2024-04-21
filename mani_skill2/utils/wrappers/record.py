@@ -5,6 +5,7 @@ from pathlib import Path
 import gymnasium as gym
 import h5py
 import numpy as np
+import numpy.linalg as LA
 from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
@@ -312,6 +313,35 @@ class RecordEpisode(gym.Wrapper):
         # Dump
         group.create_dataset("actions", data=actions, dtype=np.float32)
         group.create_dataset("success", data=dones, dtype=bool)
+
+        # Add Actor names and ids to self._episode_info
+        actors = self.get_actors()
+        actor_ids = {x.name:x.id for x in actors}
+        actor_pos = {x.name:x.get_pose().p for x in actors}
+
+        exclude_actors = ['ground', 'goal_site', '_goal_site', '_target_site'] # virtual actors
+        objects = [n for n in actor_ids.keys() if n not in exclude_actors]
+        if 'goal_site' in actor_pos.keys():
+            goal_pos = actor_pos['goal_site']
+        elif '_goal_site' in actor_pos.keys():
+            goal_pos = actor_pos['_goal_site']
+        else:
+            raise ValueError()
+
+        target_obj = None
+        min_dist = np.inf
+        for o in objects:
+            dist = LA.norm(actor_pos[o] - goal_pos)
+            #print(dist)
+            if dist<min_dist:
+                target_obj = o
+                min_dist = dist
+        #print(min_dist)
+
+        self._episode_info['target_object'] = target_obj
+        self._episode_info['objects'] = objects
+        self._episode_info['actor_ids'] = actor_ids
+
         if self.init_state_only:
             group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
         else:
