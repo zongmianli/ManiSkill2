@@ -343,14 +343,14 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     traj_path = args.traj_path
     ori_h5_file = h5py.File(traj_path, "r")
 
-    # model_id = os.path.basename(traj_path).split('.')[0]
-    # model_ids = []
-    # model_ids.append(model_id)
-    # # add more objects
-    # if args.more_objs is not None:
-    #     more_objects = args.more_objs.split(',')
-    #     for ycb_id in more_objects:
-    #         model_ids.append(ycb_id)
+    model_id = os.path.basename(traj_path).split('.')[0]
+    model_ids = []
+    model_ids.append(model_id)
+    # add more objects
+    if args.more_objs is not None:
+        more_objects = args.more_objs.split(',')
+        for ycb_id in more_objects:
+            model_ids.append(ycb_id)
 
     # Load associated json
     json_path = traj_path.replace(".h5", ".json")
@@ -362,7 +362,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
     # Create a twin env with the original kwargs
     if args.target_control_mode is not None:
-        #ori_env = gym.make(env_id, model_ids=model_ids, **ori_env_kwargs)
         ori_env = gym.make(env_id, **ori_env_kwargs)
     else:
         ori_env = None
@@ -379,7 +378,13 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs[
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
-    env = gym.make(env_id, camera_cfgs={"add_segmentation": True}, **env_kwargs)
+
+    new_env_id = "PickDoubleYCB-v0"
+
+    env_kwargs["model_ids"] = model_ids
+
+    env = gym.make(new_env_id, camera_cfgs={"add_segmentation": True}, **env_kwargs)
+
     #env = gym.make(env_id, model_ids=model_ids, camera_cfgs={"add_segmentation": True}, **env_kwargs) # 0421
 
     if pbar is not None:
