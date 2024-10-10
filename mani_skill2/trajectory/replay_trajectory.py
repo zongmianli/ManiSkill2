@@ -2,6 +2,12 @@
 The replayed trajectory can use different observation modes and control modes.
 We support translating actions from certain controllers to a limited number of controllers.
 The script is only tested for Panda, and may include some Panda-specific hardcode.
+
+# 20240808
+python mani_skill2/trajectory/replay_trajectory.py --traj-path demos/v0/rigid_body/PickClutterYCB-v0/trajectory.h5 --save-traj --obs-mode rgbd --target-control-mode pd_ee_delta_pose --num-procs 10
+
+# 20241010
+python mani_skill2/trajectory/replay_trajectory.py --traj-path demos/v0/rigid_body/PickClutterYCB-v0/trajectory.h5 --save-traj --obs-mode rgbd --target-control-mode pd_ee_delta_pose --num-procs 10 --bg-name minimal_bedroom
 """
 
 import argparse
@@ -364,7 +370,8 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
     #env = gym.make(env_id, **env_kwargs)
-    env = gym.make(env_id, **env_kwargs, camera_cfgs={"add_segmentation": True}) # 0421
+    #env = gym.make(env_id, **env_kwargs, camera_cfgs={"add_segmentation": True}) # 0421
+    env = gym.make(env_id, **env_kwargs, camera_cfgs={"add_segmentation": True, "width": 256, "height": 256}) # 1010
 
     if pbar is not None:
         pbar.set_postfix(
