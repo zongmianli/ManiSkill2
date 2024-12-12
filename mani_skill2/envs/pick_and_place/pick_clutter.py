@@ -55,7 +55,11 @@ class PickClutterEnv(StationaryManipulationEnv):
 
         self.episode_idx = -1
 
-        self.goal_thresh = 0.025
+        self.goal_thresh = 0.05
+
+        self.grounding_thresh = 0.01
+        self.is_lang_grounded = False
+
 
         super().__init__(**kwargs)
 
@@ -235,16 +239,20 @@ class PickClutterEnv(StationaryManipulationEnv):
         return cam_cfg
 
     def render_human(self):
-        set_actor_visibility(self.target_site, 0.8)
-        set_actor_visibility(self.goal_site, 0.5)
+        # set_actor_visibility(self.target_site, 0.8)
+        # set_actor_visibility(self.goal_site, 0.5)
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
         ret = super().render_human()
         set_actor_visibility(self.target_site, 0)
         set_actor_visibility(self.goal_site, 0)
         return ret
 
     def render_rgb_array(self):
-        set_actor_visibility(self.target_site, 0.8)
-        set_actor_visibility(self.goal_site, 0.5)
+        # set_actor_visibility(self.target_site, 0.8)
+        # set_actor_visibility(self.goal_site, 0.5)
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
         ret = super().render_rgb_array()
         set_actor_visibility(self.target_site, 0)
         set_actor_visibility(self.goal_site, 0)
@@ -260,8 +268,33 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().set_state(state[:-3])
 
 
+# @register_env("PickClutterYCB-v0", max_episode_steps=200)
+# class PickClutterYCBEnv(PickClutterEnv):
+#     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/pick_clutter/ycb_train_5k.json.gz"
+#     DEFAULT_ASSET_ROOT = PickSingleYCBEnv.DEFAULT_ASSET_ROOT
+#     DEFAULT_MODEL_JSON = PickSingleYCBEnv.DEFAULT_MODEL_JSON
+
+#     def _load_model(self, model_id, model_scale=1.0):
+#         density = self.model_db[model_id].get("density", 1000)
+#         obj = build_actor_ycb(
+#             model_id,
+#             self._scene,
+#             scale=model_scale,
+#             density=density,
+#             root_dir=self.asset_root,
+#         )
+#         obj.name = model_id
+#         obj.set_damping(0.1, 0.1)
+#         return obj
+
+
 @register_env("PickClutterYCB-v0", max_episode_steps=200)
 class PickClutterYCBEnv(PickClutterEnv):
+    '''
+    Customized PickClutterYCB environment with a different success criteria.
+    The task is considered successful as long as the target object is lifted
+    above the goal_pos.
+    '''
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/pick_clutter/ycb_train_5k.json.gz"
     DEFAULT_ASSET_ROOT = PickSingleYCBEnv.DEFAULT_ASSET_ROOT
     DEFAULT_MODEL_JSON = PickSingleYCBEnv.DEFAULT_MODEL_JSON
@@ -278,3 +311,22 @@ class PickClutterYCBEnv(PickClutterEnv):
         obj.name = model_id
         obj.set_damping(0.1, 0.1)
         return obj
+
+    def _set_goal(self):
+        self.goal_pos = self.obj_start_pos + np.array([0,0,0.1])
+        self.goal_site.set_pose(Pose(self.goal_pos))
+
+    def evaluate(self, **kwargs):
+        is_obj_placed = self.obj_pose.p[2] >= self.goal_pos[2]
+
+        if not self.is_lang_grounded:
+            tcp_to_goal_pos = self.goal_pos - self.tcp.pose.p
+            self.is_lang_grounded = np.linalg.norm(tcp_to_goal_pos) <= self.grounding_thresh
+
+        is_robot_static = self.check_robot_static()
+        return dict(
+            #is_obj_placed=is_obj_placed,
+            success=is_obj_placed,
+            grounding_success=self.is_lang_grounded,
+            is_robot_static=is_robot_static,
+        )

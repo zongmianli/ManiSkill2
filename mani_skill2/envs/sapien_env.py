@@ -730,7 +730,14 @@ class BaseEnv(gym.Env):
         self.render_mode = "cameras"
         if rgb_array is not None:
             images.append(rgb_array)
-        images.extend(self._render_cameras_images())
+        cam_images = self._render_cameras_images()
+        vertical_white_bar = (255*np.ones((images[0].shape[0], 5, 3))).astype(np.uint8)
+        horizontal_white_bar = (255*np.ones((5, cam_images[0].shape[1], 3))).astype(np.uint8)
+        images.extend([
+            vertical_white_bar, 
+            np.concatenate([cam_images[0], horizontal_white_bar], axis=0),
+            cam_images[4]
+        ])
         return tile_images(images)
 
     def _render_cameras_images(self):
